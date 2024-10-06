@@ -160,6 +160,7 @@ BLOCK_SIZE_N = 16
 BLOCK_SIZE_K = 16
 GROUP_SIZE_M = 8
 USE_GPU = False
+USE_BLOCK_POINTERS = False
 
 
 @triton.jit
@@ -244,6 +245,65 @@ def matmul_kernel(
     tl.store(c_ptrs, c)
 
 
+@triton.jit
+def matmul_kernel_block_ptr(
+        # Pointers to matrices
+        a_ptr, b_ptr, c_ptr,
+        # Matrix dimensions
+        M, N, K,
+        # The stride variables represent how much to increase the ptr by when moving by 1
+        # element in a particular dimension. E.g. `stride_am` is how much to increase `a_ptr`
+        # by to get the element one row down (A has M rows).
+        stride_am, stride_ak,  #
+        stride_bk, stride_bn,  #
+        stride_cm, stride_cn,
+        # Meta-parameters
+        BLOCK_SIZE_M: tl.constexpr, BLOCK_SIZE_N: tl.constexpr, BLOCK_SIZE_K: tl.constexpr,  #
+        GROUP_SIZE_M: tl.constexpr,  #
+):
+    pid = tl.program_id(axis=0)
+    num_pid_n = tl.cdiv(N, BLOCK_SIZE_N)
+    num_pid_m = tl.cdiv(M, BLOCK_SIZE_M)
+    num_pid_in_group = GROUP_SIZE_M * num_pid_n
+    group_id = pid // num_pid_in_group
+    first_pid_m = group_id * GROUP_SIZE_M
+    group_size_m = min(num_pid_m - first_pid_m, GROUP_SIZE_M)
+    pid_m = first_pid_m + (pid % group_size_m)
+    pid_n = (pid % num_pid_in_group) // group_size_m
+    block_offset_m = pid_m * BLOCK_SIZE_M
+    block_offset_n = pid_n * BLOCK_SIZE_N
+
+    a_tile_ptr = tl.make_block_ptr(
+        base=a_ptr,
+        shape=(M, K),
+        strides=(stride_am, stride_ak),
+        offsets=(block_offset_m, 0),
+        block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_K),
+        order=(1, 0),
+    )
+    b_tile_ptr = tl.make_block_ptr(
+        base=b_ptr,
+        shape=(K, N),
+        strides=(stride_bk, stride_bn),
+        offsets=(0, block_offset_n),
+        block_shape=(BLOCK_SIZE_K, BLOCK_SIZE_N),
+        order=(1, 0),
+    )
+    accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)
+
+    for k in range(0, K, BLOCK_SIZE_K):
+        a = tl.load(a_tile_ptr, boundary_check=(0, 1))
+        b = tl.load(b_tile_ptr, boundary_check=(0, 1))
+        accumulator += tl.dot(a, b)
+        a_tile_ptr = tl.advance(a_tile_ptr, [0, BLOCK_SIZE_K])
+        b_tile_ptr = tl.advance(b_tile_ptr, [BLOCK_SIZE_K, 0])
+
+    c = accumulator
+    c_block_ptr = tl.make_block_ptr(base=c_ptr, shape=(M, N), strides=(stride_cm, stride_cn),
+                                    offsets=(block_offset_m, block_offset_n), block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_N),
+                                    order=(1, 0))
+    tl.store(c_block_ptr, accumulator, boundary_check=(0, 1))
+
 # %%
 # We can now create a convenience wrapper function that only takes two input tensors,
 # and (1) checks any shape constraint; (2) allocates the output; (3) launches the above kernel.
@@ -265,15 +325,26 @@ def matmul(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor):
         assert c.shape == (M, N), "Incompatible dimensions"
     # 1D launch kernel where each block gets its own program.
     grid = (triton.cdiv(M, BLOCK_SIZE_M) * triton.cdiv(N, BLOCK_SIZE_N), )
-    matmul_kernel[grid](
-        a, b, c,  #
-        M, N, K,  #
-        a.stride(0), a.stride(1),  #
-        b.stride(0), b.stride(1),  #
-        c.stride(0), c.stride(1),  #
-        BLOCK_SIZE_M=BLOCK_SIZE_M, BLOCK_SIZE_N=BLOCK_SIZE_N, BLOCK_SIZE_K=BLOCK_SIZE_K,  #
-        GROUP_SIZE_M=GROUP_SIZE_M,  #
-    )
+    if USE_BLOCK_POINTERS:
+        matmul_kernel_block_ptr[grid](
+            a, b, c,  #
+            M, N, K,  #
+            a.stride(0), a.stride(1),  #
+            b.stride(0), b.stride(1),  #
+            c.stride(0), c.stride(1),  #
+            BLOCK_SIZE_M=BLOCK_SIZE_M, BLOCK_SIZE_N=BLOCK_SIZE_N, BLOCK_SIZE_K=BLOCK_SIZE_K,  #
+            GROUP_SIZE_M=GROUP_SIZE_M,  #
+        )
+    else:
+        matmul_kernel[grid](
+            a, b, c,  #
+            M, N, K,  #
+            a.stride(0), a.stride(1),  #
+            b.stride(0), b.stride(1),  #
+            c.stride(0), c.stride(1),  #
+            BLOCK_SIZE_M=BLOCK_SIZE_M, BLOCK_SIZE_N=BLOCK_SIZE_N, BLOCK_SIZE_K=BLOCK_SIZE_K,  #
+            GROUP_SIZE_M=GROUP_SIZE_M,  #
+        )
     return c
 
 
