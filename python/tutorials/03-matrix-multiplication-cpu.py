@@ -274,7 +274,7 @@ def matmul_kernel(
             block_shape=(BLOCK_SIZE_M, BLOCK_SIZE_N),
             order=(1, 0)
         )
-        tl.store(c_block_ptr, accumulator, boundary_check=(0, 1))
+        tl.store(c_block_ptr, c, boundary_check=(0, 1))
     else:
         # -----------------------------------------------------------
         # Write back the block of the output matrix C with masks.
