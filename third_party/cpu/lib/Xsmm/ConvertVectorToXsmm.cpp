@@ -51,7 +51,9 @@ static Value getMemrefSource(PatternRewriter &rewriter, Operation *op,
                              TypedValue<Type> operand) {
   Location loc = op->getLoc();
   MLIRContext *ctx = op->getContext();
-  OpBuilder::InsertionGuard g(rewriter);
+
+  if (isa<MemRefType>(operand.getType()))
+    return operand;
 
   rewriter.setInsertionPoint(op);
 
@@ -64,6 +66,9 @@ static Value getMemrefSource(PatternRewriter &rewriter, Operation *op,
         getAsIndexOpFoldResult(ctx, vecTy.getShape()),
         getAsIndexOpFoldResult(ctx, strides));
   }
+
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(op);
 
   auto vecTy = dyn_cast<VectorType>(operand.getType());
   assert(vecTy && "Expect vector type operand");
@@ -167,7 +172,11 @@ struct ContractToXsmm : public OpRewritePattern<vector::ContractionOp> {
     SmallVector<Attribute> flags;
     Value lhsBuf = getMemrefSource(rewriter, contractOp, lhs);
     Value rhsBuf = getMemrefSource(rewriter, contractOp, rhs);
-    Value accBuf = getMemrefSource(rewriter, contractOp, acc);
+    std::optional<Value> hoistedAcc =
+        hoistAccumulationBuffer(rewriter, contractOp, acc);
+    Value accBuf =
+        hoistedAcc ? *hoistedAcc : getMemrefSource(rewriter, contractOp, acc);
+
     SmallVector<Value> inputs{lhsBuf, rhsBuf, accBuf};
     SmallVector<Value> outputs{nullptr};
     auto brgemmInfo =
@@ -182,13 +191,19 @@ struct ContractToXsmm : public OpRewritePattern<vector::ContractionOp> {
         rewriter, contractOp, ValueRange{lhsBuf, rhsBuf, accBuf},
         contractOp.getIndexingMapsArray(), flags);
 
-    Value zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    SmallVector<Value> indices(dyn_cast<MemRefType>(accBuf.getType()).getRank(),
-                               zeroIdx);
-    auto readOp =
-        rewriter.create<vector::TransferReadOp>(loc, vecTy, accBuf, indices);
-
-    rewriter.replaceOp(contractOp, readOp);
+    if (hoistedAcc) {
+      // Hoisting already updated all uses correctly.
+      // Only remove the original contraction.
+      rewriter.eraseOp(contractOp);
+    } else {
+      // Load back the result to bring it back to vector semantics.
+      Value zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+      SmallVector<Value> indices(
+          dyn_cast<MemRefType>(accBuf.getType()).getRank(), zeroIdx);
+      auto readOp =
+          rewriter.create<vector::TransferReadOp>(loc, vecTy, accBuf, indices);
+      rewriter.replaceOp(contractOp, readOp);
+    }
 
     return success();
   }
