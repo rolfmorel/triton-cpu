@@ -12,4 +12,9 @@ def TritonToStructured : Pass<"triton-to-structured", "mlir::ModuleOp"> {
   ];
 }
 
+def StructuredToTriton : Pass<"structured-to-triton", "mlir::ModuleOp"> {
+  let summary = "Convert TritonStructured ops to their Triton equivalents";
+  let constructor = "triton::createStructuredToTritonPass()";
+}
+
 #endif

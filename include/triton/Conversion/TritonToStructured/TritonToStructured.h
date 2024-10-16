@@ -11,6 +11,8 @@ namespace triton {
 
 std::unique_ptr<OperationPass<ModuleOp>> createTritonToStructuredPass();
 
+std::unique_ptr<OperationPass<ModuleOp>> createStructuredToTritonPass();
+
 } // namespace triton
 } // namespace mlir
 

@@ -1,5 +1,6 @@
 add_triton_library(TritonToStructured
   TritonToStructuredPass.cpp
+  StructuredToTritonPass.cpp
 
   DEPENDS
   TritonStructuredTableGen
