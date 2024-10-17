@@ -129,6 +129,7 @@ class CPUBackend(BaseBackend):
         # TTIR -> TTCIR
         pm = ir.pass_manager(mod.context)
         pm.enable_debug()
+        cpu.passes.ttcpuir.add_raise_block_pointer(pm)
         if opt.enable_triton_xsmm:
             cpu.passes.ttcpuir.add_convert_triton_to_xsmm(pm)
             passes.common.add_canonicalizer(pm)
