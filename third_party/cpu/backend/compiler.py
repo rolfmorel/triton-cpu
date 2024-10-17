@@ -123,6 +123,7 @@ class CPUBackend(BaseBackend):
         # TTIR -> TTCIR
         pm = ir.pass_manager(mod.context)
         pm.enable_debug()
+        cpu.passes.ttcpuir.add_raise_block_pointer(pm)
         cpu.passes.ttcpuir.add_scalarize(pm)
         cpu.passes.ttcpuir.add_convert_memory_ops(pm)
         cpu.passes.ttcpuir.add_convert_ptr_ops(pm)
