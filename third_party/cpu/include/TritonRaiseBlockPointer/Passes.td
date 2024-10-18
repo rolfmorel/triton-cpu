@@ -12,7 +12,7 @@
 include "mlir/Pass/PassBase.td"
 
 def TritonRaiseBlockPointer
-    : Pass<"triton-raise-block-pointer", "mlir::ModuleOp"> {
+    : Pass<"triton-cpu-raise-block-pointer", "mlir::ModuleOp"> {
   let summary = "Convert Triton non-block pointer to block pointer";
   let description = [{
     Pass to raise different patterns operating on pointers to block pointers.

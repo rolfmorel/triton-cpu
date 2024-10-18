@@ -12,7 +12,7 @@
 #include "llvm/Support/Debug.h"
 #include <set>
 
-#define DEBUG_TYPE "triton-raise-block-pointer"
+#define DEBUG_TYPE "triton-cpu-raise-block-pointer"
 
 // This pass does manage to raise tensor of pointers into block pointers for
 // simple cases (e.g. 03 matmul tutorial). However, this pass has several know
