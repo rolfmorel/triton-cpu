@@ -300,9 +300,12 @@ def matmul_kernel(
         tl.store(c_ptrs, c)
 
 
+<<<<<<< HEAD
 # %%
 # We can now create a convenience wrapper function that only takes two input tensors,
 # and (1) checks any shape constraint; (2) allocates the output; (3) launches the above kernel.
+=======
+>>>>>>> babd40da (Matmul tutorial - external preprocessing (#15))
 def matmul_preprocess_input(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor):
     # Check constraints.
     assert a.shape[1] == b.shape[0], "Incompatible dimensions"
@@ -346,7 +349,11 @@ def matmul_preprocess_input(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor):
 # %%
 # We can now create a convenience wrapper function that only takes two input tensors,
 # and (1) checks any shape constraint; (2) allocates the output; (3) launches the above kernel.
+<<<<<<< HEAD
 def matmul(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, M: int, N: int, K: int, k_block: int, num_threads=0):
+=======
+def matmul(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, M: int, N: int, K: int, k_block: int):
+>>>>>>> babd40da (Matmul tutorial - external preprocessing (#15))
     if not PREPROCESS_EXTERNAL:
         a, b, c, M, N, K, k_block = matmul_preprocess_input(a, b, c)
 
