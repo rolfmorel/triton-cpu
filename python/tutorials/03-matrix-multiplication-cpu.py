@@ -303,7 +303,7 @@ def matmul_kernel(
 # %%
 # We can now create a convenience wrapper function that only takes two input tensors,
 # and (1) checks any shape constraint; (2) allocates the output; (3) launches the above kernel.
-def matmul_preprocess_input(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, num_threads=0):
+def matmul_preprocess_input(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor):
     # Check constraints.
     assert a.shape[1] == b.shape[0], "Incompatible dimensions"
     assert a.is_contiguous(), "Matrix A must be contiguous"
@@ -346,7 +346,7 @@ def matmul_preprocess_input(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, n
 # %%
 # We can now create a convenience wrapper function that only takes two input tensors,
 # and (1) checks any shape constraint; (2) allocates the output; (3) launches the above kernel.
-def matmul(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, M: int, N: int, K: int, k_block: int):
+def matmul(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, M: int, N: int, K: int, k_block: int, num_threads=0):
     if not PREPROCESS_EXTERNAL:
         a, b, c, M, N, K, k_block = matmul_preprocess_input(a, b, c)
 
@@ -360,8 +360,8 @@ def matmul(a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, M: int, N: int, K:
         c.stride(0), c.stride(1),  #
         BLOCK_SIZE_M=BLOCK_SIZE_M, BLOCK_SIZE_N=BLOCK_SIZE_N, BLOCK_SIZE_K=k_block,  #
         GROUP_SIZE_M=GROUP_SIZE_M,  #
-        num_threads=num_threads,  #
         USE_BLOCK_POINTERS=USE_BLOCK_POINTERS,  #
+        num_threads=num_threads
     )
     return c
 
@@ -494,18 +494,16 @@ def benchmark(M, N, K, provider):
     if provider == 'torch-gpu':
         ms, min_ms, max_ms = triton.testing.do_bench(lambda: torch.matmul(a, b), quantiles=quantiles)
     elif provider == 'triton-gpu':
-        ms, min_ms, max_ms = triton.testing.do_bench(lambda: matmul(triton_a, triton_b, triton_c, m_dim, n_dim, k_dim, k_block), quantiles=quantiles,
-                                                     device_type=device)
+        ms, min_ms, max_ms = triton.testing.do_bench(lambda: matmul(triton_a, triton_b, triton_c, m_dim, n_dim, k_dim, k_block), quantiles=quantiles)
     elif provider == 'torch-cpu-native':
         ms, min_ms, max_ms = triton.testing.do_bench(lambda: torch.matmul(a, b, out=c), quantiles=quantiles)
     elif provider == 'torch-cpu-compile':
         compiled = torch.compile(torch.matmul)
-        ms, min_ms, max_ms = triton.testing.do_bench(lambda: compiled(a, b, out=c), quantiles=quantiles,
-                                                     device_type=device)
-    elif provider == 'triton-cpu-single' or provider == 'triton-cpu-single-v2':
-        ms, min_ms, max_ms = triton.testing.do_bench(lambda: matmul(triton_a, triton_b, triton_c, m_dim, n_dim, k_dim, k_block), quantiles=quantiles, device_type=device)
+        ms, min_ms, max_ms = triton.testing.do_bench(lambda: compiled(a, b, out=c), quantiles=quantiles)
+    elif provider == 'triton-cpu-single':
+        ms, min_ms, max_ms = triton.testing.do_bench(lambda: matmul(triton_a, triton_b, triton_c, m_dim, n_dim, k_dim, k_block, num_threads=1), quantiles=quantiles)
     elif provider == 'triton-cpu' or provider == 'triton-cpu-v2':
-        ms, min_ms, max_ms = triton.testing.do_bench(lambda: matmul(triton_a, triton_b, triton_c, m_dim, n_dim, k_dim, k_block), quantiles=quantiles, device_type=device)
+        ms, min_ms, max_ms = triton.testing.do_bench(lambda: matmul(triton_a, triton_b, triton_c, m_dim, n_dim, k_dim, k_block), quantiles=quantiles)
     perf = lambda ms: 2 * M * N * K * 1e-9 / (ms * 1e-3)
     return perf(ms), perf(max_ms), perf(min_ms)
 
