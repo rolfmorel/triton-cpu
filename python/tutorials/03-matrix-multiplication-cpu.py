@@ -150,11 +150,11 @@ You will specifically learn about:
 # ------------
 
 import torch
+import os
 
 import triton
 import triton.language as tl
 
-import xsmm_py
 
 # It depends on CPU cache sizes.
 BLOCK_SIZE_M = 64
@@ -162,14 +162,19 @@ BLOCK_SIZE_N = 64
 BLOCK_SIZE_K = 64
 GROUP_SIZE_M = 4
 USE_GPU = False
-USE_BLOCK_POINTERS = False
-DATA_TYPE = torch.float32
-K_DIM_PADDING = False
-DYNAMIC_K_BLOCK = False
-CACHE_PADDING = False
-PREPROCESS_EXTERNAL = False
-XSMM_PAD = False
-PAD_B_ONLY = False
+USE_BLOCK_POINTERS = os.getenv("USE_BLOCK_POINTERS", "0") != "0"
+DATA_TYPE = { "f32": torch.float32,
+              "bf16": torch.bfloat16 }[os.getenv("DATATYPE", "f32")]
+K_DIM_PADDING = os.getenv("K_DIM_PADDING", "0") != "0"
+DYNAMIC_K_BLOCK = os.getenv("DYNAMIC_K_BLOCK", "0") != "0"
+CACHE_PADDING = os.getenv("CACHE_PADDING", "0") != "0"
+PREPROCESS_EXTERNAL = os.getenv("PREPROCESS_EXTERNAL", "0") != "0"
+XSMM_PAD = os.getenv("XSMM_PAD", "0") != "0"
+PAD_B_ONLY = os.getenv("XSMM_PAD", "0") != "0"
+
+xsmm_py = None
+if XSMM_PAD:
+    import xsmm_py
 
 @triton.jit
 def matmul_kernel(
