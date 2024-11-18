@@ -163,7 +163,8 @@ BLOCK_SIZE_K = 64
 GROUP_SIZE_M = 4
 USE_GPU = False
 USE_BLOCK_POINTERS = os.getenv("USE_BLOCK_POINTERS", "0") != "0"
-DATA_TYPE = torch.float32
+DATA_TYPE = { "f32": torch.float32,
+              "bf16": torch.bfloat16 }[os.getenv("DATATYPE", "f32")]
 K_DIM_PADDING = os.getenv("K_DIM_PADDING", "0") != "0"
 DYNAMIC_K_BLOCK = os.getenv("DYNAMIC_K_BLOCK", "0") != "0"
 CACHE_PADDING = os.getenv("CACHE_PADDING", "0") != "0"
