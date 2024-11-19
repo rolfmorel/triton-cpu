@@ -172,7 +172,7 @@ DYNAMIC_K_BLOCK = os.getenv("DYNAMIC_K_BLOCK", "0") != "0"
 CACHE_PADDING = os.getenv("CACHE_PADDING", "0") != "0"
 PREPROCESS_EXTERNAL = os.getenv("PREPROCESS_EXTERNAL", "0") != "0"
 XSMM_PAD = os.getenv("XSMM_PAD", "0") != "0"
-PAD_B_ONLY = os.getenv("XSMM_PAD", "0") != "0"
+PAD_B_ONLY = os.getenv("PAD_B_ONLY", "0") != "0"
 
 xsmm_py = None
 if XSMM_PAD:
