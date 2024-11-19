@@ -159,7 +159,9 @@ import triton.language as tl
 # It depends on CPU cache sizes.
 BLOCK_SIZE_M = 64
 BLOCK_SIZE_N = 64
-BLOCK_SIZE_K = 64
+BLOCK_SIZE_K = { "32": 32,
+                 "64": 64,
+                 "512": 512 }[os.getenv("BLOCK_SIZE_K", "64")]
 GROUP_SIZE_M = 4
 USE_GPU = False
 USE_BLOCK_POINTERS = os.getenv("USE_BLOCK_POINTERS", "0") != "0"
