@@ -4,6 +4,8 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 config=$1
 shift
+numthreads=$1
+shift
 
 block_pointers_via_raising=0
 
@@ -64,6 +66,11 @@ else
   echo "ERROR: unrecognized config: $config"
   exit 1
 fi
+
+export LD_PRELOAD=/lib64/libomp.so:$LD_PRELOAD
+export TRITON_CPU_MAX_THREADS=${numthreads}
+export OMP_NUM_THREADS=${numthreads}
+export KMP_AFFINITY=granularity=fine,compact,1,0
 
 python $SCRIPT_DIR/03-matrix-multiplication-cpu.py
 
