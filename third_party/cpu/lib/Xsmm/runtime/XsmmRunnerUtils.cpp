@@ -68,8 +68,11 @@ void *get_base_ptr(const libxsmm_datatype dType, void *alignedPtr,
   } else if (dType == LIBXSMM_DATATYPE_BF16) {
     bf16 *base_ptr = (bf16 *)alignedPtr + offset;
     return (void *)base_ptr;
+  } else if (dType == LIBXSMM_DATATYPE_BF8) {
+    uint8_t *base_ptr = (uint8_t *)alignedPtr + offset;
+    return (void *)base_ptr;
   }
-  fprintf(stderr, "Unhandled data type in get_data_pointer_from_memref_desc:%d",
+  fprintf(stderr, "Unhandled data type in get_data_pointer_from_memref_desc:%d\n",
           dType);
   return nullptr;
 }

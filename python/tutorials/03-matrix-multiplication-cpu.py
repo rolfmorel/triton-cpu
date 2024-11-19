@@ -155,7 +155,6 @@ import os
 import triton
 import triton.language as tl
 
-
 # It depends on CPU cache sizes.
 BLOCK_SIZE_M = 64
 BLOCK_SIZE_N = 64
@@ -166,7 +165,8 @@ GROUP_SIZE_M = 4
 USE_GPU = False
 USE_BLOCK_POINTERS = os.getenv("USE_BLOCK_POINTERS", "0") != "0"
 DATA_TYPE = { "f32": torch.float32,
-              "bf16": torch.bfloat16 }[os.getenv("DATATYPE", "f32")]
+              "bf16": torch.bfloat16,
+              "bf8": torch.float8_e5m2 }[os.getenv("DATATYPE", "f32")]
 K_DIM_PADDING = os.getenv("K_DIM_PADDING", "0") != "0"
 DYNAMIC_K_BLOCK = os.getenv("DYNAMIC_K_BLOCK", "0") != "0"
 CACHE_PADDING = os.getenv("CACHE_PADDING", "0") != "0"
@@ -397,8 +397,8 @@ torch.manual_seed(0)
 
 triton.runtime.driver.set_active_to_cpu(experimental=False)
 
-a = torch.randn((512, 512), device='cpu', dtype=DATA_TYPE)
-b = torch.randn((512, 512), device='cpu', dtype=DATA_TYPE)
+a = torch.randn((512, 512), device='cpu').type(DATA_TYPE)
+b = torch.randn((512, 512), device='cpu').type(DATA_TYPE)
 torch_output = torch.matmul(a, b)
 c = None
 m_dim = None
@@ -411,14 +411,14 @@ triton_output = matmul(a, b, c, m_dim, n_dim, k_dim, k_block)
 print(f"triton_cpu_output_with_{a.dtype}_inputs={triton_output}")
 print(f"torch_cpu_output_with_{a.dtype}_inputs={torch_output}")
 rtol = 0
-if torch.allclose(triton_output, torch_output, atol=1e-2, rtol=rtol):
+if torch.allclose(triton_output.type(torch.float64), torch_output.type(torch.float64), atol=1e-2, rtol=rtol):
     print("✅ TritonCPU and TorchCPU match")
-elif DATA_TYPE == torch.bfloat16 and torch.allclose(triton_output, torch_output, atol=2e-0, rtol=rtol):
+elif DATA_TYPE in {torch.bfloat16, torch.float8_e5m2} and torch.allclose(triton_output.type(torch.float64), torch_output.type(torch.float64), atol=2e-0, rtol=rtol):
     print("⚠️ TritonCPU and TorchCPU rounding errors, the maximum difference is "
-          f'{torch.max(torch.abs(triton_output - torch_output))}')
+          f'{torch.max(torch.abs(triton_output.type(torch.float64) - torch_output.type(torch.float64)))}')
 else:
     print("❌ TritonCPU and TorchCPU differ, the maximum difference is "
-          f'{torch.max(torch.abs(triton_output - torch_output))}')
+          f'{torch.max(torch.abs(triton_output.type(torch.float64) - torch_output.type(torch.float64)))}')
 
 # %%
 # Benchmark
@@ -492,8 +492,8 @@ def benchmark(M, N, K, provider):
     import os
 
     device = 'cpu' if 'cpu' in provider else 'cuda'
-    a = torch.randn((M, K), device=device, dtype=DATA_TYPE)
-    b = torch.randn((K, N), device=device, dtype=DATA_TYPE)
+    a = torch.randn((M, K), device=device).type(DATA_TYPE)
+    b = torch.randn((K, N), device=device).type(DATA_TYPE)
 
     if device == 'cpu':
         c = torch.empty((M, N), device=a.device, dtype=a.dtype)
