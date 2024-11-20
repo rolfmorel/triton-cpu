@@ -14,8 +14,16 @@ void fastZeroPad2D(const at::Tensor &input, torch::Tensor &output) {
              outSizes[1] >= inSizes[1] && byteSize == output.element_size() &&
              "Invalid fastZeroPad2D tensors");
 
-  libxsmm_datatype dtype =
-      byteSize == 4 ? LIBXSMM_DATATYPE_F32 : LIBXSMM_DATATYPE_BF16;
+  libxsmm_datatype dtype;
+  if (byteSize == 4)
+    dtype = LIBXSMM_DATATYPE_F32;
+  else if (byteSize == 2)
+    dtype = LIBXSMM_DATATYPE_BF16;
+  else if (byteSize == 1)
+    dtype = LIBXSMM_DATATYPE_BF8;
+  else
+    assert(false && "unsupported datatype");
+
   libxsmm_meltw_unary_shape shape;
   // Fliped to libxsmm's column-major convention.
   shape.m = inSizes[1];
