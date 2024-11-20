@@ -19,9 +19,10 @@ while [[ $# -gt 0 ]]; do
       shift
       export PREPROCESS_EXTERNAL=1
       ;;
-    --datatype-bf16)
+    --datatype)
       shift
-      export DATATYPE=bf16
+      export DATATYPE=$1
+      shift
       ;;
     *)
       echo "ERROR: unknown argument: $1"
@@ -48,10 +49,11 @@ elif [ "$config" = "xsmm-pad-k" ]; then
   fi
   echo "NOTE: requires that \$XSMM_LIB_DIR is in LD_LIBRARY_PATH"
   export XSMM_PAD=1
+  export K_DIM_PADDING=1
+  export CACHE_PADDING=1
+  export BLOCK_SIZE_K=512
   export TRITON_CPU_TRITON_XSMM=1
 elif [ "$config" = "xsmm-loop-collapse-pad-b" ]; then
-  export PAD_B_ONLY=1
-  export TRITON_CPU_LOOP_BRGEMM_XSMM=1
   if [ $block_pointers_via_raising = 1 ]; then
     export TRITON_CPU_RAISE_BLOCK_POINTER=1
   else
@@ -59,8 +61,12 @@ elif [ "$config" = "xsmm-loop-collapse-pad-b" ]; then
   fi
   echo "NOTE: requires that \$XSMM_LIB_DIR is in LD_LIBRARY_PATH"
   export XSMM_PAD=1
+  export PAD_B_ONLY=1
+  export BLOCK_SIZE_K=32
+  export CACHE_PADDING=1
+  export TRITON_CPU_LOOP_BRGEMM_XSMM=1
 elif [ "$config" = "xsmm-external-pad" ]; then
-  echo "NOT A TRUE CONFIG (... right?); try --external-pad on another config"
+  echo "NOT A TRUE CONFIG; try --external-pad on another config"
   exit 1
 else
   echo "ERROR: unrecognized config: $config"
