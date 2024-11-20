@@ -67,6 +67,7 @@ else
   exit 1
 fi
 
+export LD_LIBRARY_PATH=$PWD/../libxsmm/lib:$LD_LIBRARY_PATH
 export LD_PRELOAD=/lib64/libomp.so:$LD_PRELOAD
 export TRITON_CPU_MAX_THREADS=${numthreads}
 export OMP_NUM_THREADS=${numthreads}
