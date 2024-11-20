@@ -129,6 +129,12 @@ extern "C" int64_t xsmm_gemm_dispatch(const libxsmm_datatype dtype,
   l_shape.a_in_type = dtype;
   l_shape.b_in_type = dtype;
   l_shape.out_type = out_dtype;
+  assert((out_dtype == LIBXSMM_DATATYPE_F32 ||
+          out_dtype == LIBXSMM_DATATYPE_BF16 ||
+          out_dtype == LIBXSMM_DATATYPE_BF8) &&
+         "no support for selecting comp_type for non-F32/BF16/BF8 dtypes");
+  // Libxsmm has limited support for comp_types w.r.t. A & B & C's dtype.
+  // F32 is supported in case of F32, BF16, and BF8 out_dtypes.
   l_shape.comp_type = LIBXSMM_DATATYPE_F32;
 
   auto sgemm = libxsmm_dispatch_gemm(l_shape, l_flags, l_prefetch_flags);
@@ -344,6 +350,12 @@ extern "C" int64_t xsmm_brgemm_dispatch(const libxsmm_datatype dtype,
   l_shape.a_in_type = dtype;
   l_shape.b_in_type = dtype;
   l_shape.out_type = out_dtype;
+  assert((out_dtype == LIBXSMM_DATATYPE_F32 ||
+          out_dtype == LIBXSMM_DATATYPE_BF16 ||
+          out_dtype == LIBXSMM_DATATYPE_BF8) &&
+         "no support for selecting comp_type for non-F32/BF16/BF8 dtypes");
+  // Libxsmm has limited support for comp_types w.r.t. A & B & C's dtype.
+  // F32 is supported in case of F32, BF16, and BF8 out_dtypes.
   l_shape.comp_type = LIBXSMM_DATATYPE_F32;
   l_brconfig.br_type = LIBXSMM_GEMM_BATCH_REDUCE_STRIDE;
 
