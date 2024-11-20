@@ -1011,11 +1011,6 @@ buildBrgemmCalls(PatternRewriter &rewriter, Operation *op, ValueRange inputs,
 
   auto dtype = xsmm::utils::getDataType(rewriter, inputs[0].getType());
   auto outDtype = xsmm::utils::getDataType(rewriter, inputs[2].getType());
-  if (dtype.getValue() == DataType::BF8) {
-    //FIXME: Setting either of the following causes a segfault
-    //flags.push_back(GemmFlagsAttr::get(ctx, GemmFlags::VNNI_A));
-    //flags.push_back(GemmFlagsAttr::get(ctx, GemmFlags::VNNI_B));
-  }
   SmallVector<Value, 11> dispatchOperands;
   SmallVector<Type, 11> dispatchOperandTypes;
   // Dispatch the data type.
