@@ -278,6 +278,8 @@ LogicalResult isMappableToBrgemm(PatternRewriter &rewriter,
 
 DataTypeAttr getDataType(RewriterBase &rewriter, Type type) {
   auto elemType = getElementTypeOrSelf(type);
+  if (elemType.isFloat8E5M2())
+    return DataTypeAttr::get(rewriter.getContext(), xsmm::DataType::BF8);
   if (elemType.isBF16())
     return DataTypeAttr::get(rewriter.getContext(), xsmm::DataType::BF16);
   return DataTypeAttr::get(rewriter.getContext(), xsmm::DataType::F32);
