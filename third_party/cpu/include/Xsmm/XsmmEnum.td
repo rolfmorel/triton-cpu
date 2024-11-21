@@ -13,7 +13,8 @@ def Xsmm_DataType: I64EnumAttr<
     "DataType", "see: libxsmm_datatype",
     [
       I64EnumAttrCase<"F32",  1, "f32">,
-      I64EnumAttrCase<"BF16", 2, "bf16">
+      I64EnumAttrCase<"BF16", 2, "bf16">,
+      I64EnumAttrCase<"BF8", 4, "bf8">
     ]>{
    let cppNamespace = "mlir::xsmm";
 }

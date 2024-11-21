@@ -68,8 +68,11 @@ void *get_base_ptr(const libxsmm_datatype dType, void *alignedPtr,
   } else if (dType == LIBXSMM_DATATYPE_BF16) {
     bf16 *base_ptr = (bf16 *)alignedPtr + offset;
     return (void *)base_ptr;
+  } else if (dType == LIBXSMM_DATATYPE_BF8) {
+    uint8_t *base_ptr = (uint8_t *)alignedPtr + offset;
+    return (void *)base_ptr;
   }
-  fprintf(stderr, "Unhandled data type in get_data_pointer_from_memref_desc:%d",
+  fprintf(stderr, "Unhandled data type in get_data_pointer_from_memref_desc:%d\n",
           dType);
   return nullptr;
 }
@@ -126,9 +129,13 @@ extern "C" int64_t xsmm_gemm_dispatch(const libxsmm_datatype dtype,
   l_shape.a_in_type = dtype;
   l_shape.b_in_type = dtype;
   l_shape.out_type = out_dtype;
-  // Retarget computation type from bf16 to f32 due to missing hardware support.
-  l_shape.comp_type =
-      out_dtype == LIBXSMM_DATATYPE_BF16 ? LIBXSMM_DATATYPE_F32 : out_dtype;
+  assert((out_dtype == LIBXSMM_DATATYPE_F32 ||
+          out_dtype == LIBXSMM_DATATYPE_BF16 ||
+          out_dtype == LIBXSMM_DATATYPE_BF8) &&
+         "no support for selecting comp_type for non-F32/BF16/BF8 dtypes");
+  // Libxsmm has limited support for comp_types w.r.t. A & B & C's dtype.
+  // F32 is supported in case of F32, BF16, and BF8 out_dtypes.
+  l_shape.comp_type = LIBXSMM_DATATYPE_F32;
 
   auto sgemm = libxsmm_dispatch_gemm(l_shape, l_flags, l_prefetch_flags);
   if (!sgemm) {
@@ -343,11 +350,25 @@ extern "C" int64_t xsmm_brgemm_dispatch(const libxsmm_datatype dtype,
   l_shape.a_in_type = dtype;
   l_shape.b_in_type = dtype;
   l_shape.out_type = out_dtype;
-  // Retarget computation type from bf16 to f32 due to missing hardware support.
-  l_shape.comp_type =
-      out_dtype == LIBXSMM_DATATYPE_BF16 ? LIBXSMM_DATATYPE_F32 : out_dtype;
+  assert((out_dtype == LIBXSMM_DATATYPE_F32 ||
+          out_dtype == LIBXSMM_DATATYPE_BF16 ||
+          out_dtype == LIBXSMM_DATATYPE_BF8) &&
+         "no support for selecting comp_type for non-F32/BF16/BF8 dtypes");
+  // Libxsmm has limited support for comp_types w.r.t. A & B & C's dtype.
+  // F32 is supported in case of F32, BF16, and BF8 out_dtypes.
+  l_shape.comp_type = LIBXSMM_DATATYPE_F32;
   l_brconfig.br_type = LIBXSMM_GEMM_BATCH_REDUCE_STRIDE;
-  auto typeSize = dtype == LIBXSMM_DATATYPE_F32 ? sizeof(float) : sizeof(bf16);
+
+  size_t typeSize;
+  if (dtype == LIBXSMM_DATATYPE_F32)
+    typeSize = sizeof(float);
+  else if (dtype == LIBXSMM_DATATYPE_BF16)
+    typeSize = sizeof(bf16);
+  else if (dtype == LIBXSMM_DATATYPE_BF8)
+    typeSize = sizeof(uint8_t);
+  else
+    assert(false && "unsupported datatype");
+
   l_brconfig.br_stride_a_hint = stride_b * typeSize;
   l_brconfig.br_stride_b_hint = stride_a * typeSize;
   l_brconfig.br_unroll_hint = 0;
