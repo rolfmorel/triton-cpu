@@ -441,6 +441,11 @@ LINE_VALS = [
     'triton-cpu-single', 'triton-cpu', 'torch-cpu-native', 'torch-cpu-compile']
 LINE_NAMES = ['TritonCPU 1', 'TritonCPU', 'TorchCPU (native)', 'TorchCPU (compile)']
 LINE_STYLES = [('blue', '--'), ('blue', '-'), ('green', '--'), ('green', '-')]
+if DATA_TYPE == torch.float8_e5m2:
+    LINE_VALS = [
+        'triton-cpu-single', 'triton-cpu']
+    LINE_NAMES = ['TritonCPU 1', 'TritonCPU']
+    LINE_STYLES = [('blue', '--'), ('blue', '-')]
 
 if USE_GPU and triton.runtime.driver.get_active_gpus():
     triton.runtime.driver.set_active_to_gpu()
