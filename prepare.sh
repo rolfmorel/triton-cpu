@@ -36,7 +36,6 @@ cd ./../../
 echo "===================================== Building libxsmm"
 git clone https://github.com/libxsmm/libxsmm
 cd libxsmm
-git checkout `cat ${HERE}/cmake/xsmm.cmake | grep "URL " | awk -F"/" '{print $7}' | awk -F"." '{print $1}'`
 make realclean && make CC=clang CXX=clang++ FC= STATIC=0 -j
 cd ./../
 
