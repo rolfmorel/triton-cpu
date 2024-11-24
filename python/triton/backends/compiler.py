@@ -67,9 +67,9 @@ class AttrsDescriptor:
         (see `from_dict` or `from_hints`)
         """
         # Default initialization
-        #self.arg_properties = {}
-        #self.property_values = {}
-        #self.constant_properties = set()
+        self.arg_properties = {}
+        self.property_values = {}
+        self.constant_properties = set()
 
         self._add_common_properties(params, values)
         self._add_backend_properties(params, values)
